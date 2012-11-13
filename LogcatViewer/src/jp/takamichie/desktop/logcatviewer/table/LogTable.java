@@ -46,6 +46,9 @@ public class LogTable extends JTable {
 	c.setBackground(isRowSelected(row) ? getSelectionBackground()
 		: getBackground());
 	c.setForeground(fg);
+	int lineCount = getValueAt(row, 3).toString().split("\n").length;
+	setRowHeight(row, getRowHeight() * lineCount - lineCount * 2);
 	return c;
     }
+
 }

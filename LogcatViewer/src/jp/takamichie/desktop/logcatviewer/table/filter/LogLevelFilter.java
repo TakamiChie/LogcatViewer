@@ -1,9 +1,10 @@
-package jp.takamichie.desktop.logcatviewer.table;
+package jp.takamichie.desktop.logcatviewer.table.filter;
 
 import javax.swing.RowFilter;
 
 import jp.takamichie.desktop.logcatviewer.LogPanel;
 import jp.takamichie.desktop.logcatviewer.classes.LogLine;
+import jp.takamichie.desktop.logcatviewer.table.LogTableModel;
 
 /**
  * ログレベルでのフィルタクラス

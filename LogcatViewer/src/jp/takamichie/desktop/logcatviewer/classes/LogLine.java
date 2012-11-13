@@ -4,15 +4,21 @@ import java.util.regex.Matcher;
 
 public class LogLine {
 
+    /**
+     * Logcatの解析用正規表現です
+     */
     public static final String LOGCAT_REGEX = "([\\d-]+\\s[\\d:.]+)\\s(\\w)/([^(]+)\\(\\s*(\\d*)\\):\\s*(.*)";
-    public static final int MATCH_COUNT = 5;
+
+    /**
+     * Logcatの解析用正規表現から、ミリ秒の指定を除いたものです
+     */
+    public static final String LOGCAT_REGEX_MSEC_IGNORED = "([\\d-]+\\s[\\d:]+)\\.\\d+\\s(\\w)/([^(]+)\\(\\s*(\\d*)\\):\\s*(.*)";
 
     private String mTimeStamp;
     private char mLevel;
     private String mTags;
     private int mPID;
     private String mBody;
-    private int mLineCount;
 
     public LogLine(Matcher m) {
 	this.mTimeStamp = m.group(1);
@@ -20,7 +26,6 @@ public class LogLine {
 	this.mTags = m.group(3);
 	this.mPID = Integer.parseInt(m.group(4));
 	this.mBody = m.group(5);
-	this.mLineCount = mBody.split("\n").length;
     }
 
     public String getTimeStamp() {
@@ -43,10 +48,6 @@ public class LogLine {
 	return mBody;
     }
 
-    public int getLineCount() {
-	return mLineCount;
-    }
-
     /**
      * 対象となるアイテムがこのアイテムと近い(Body以外の値が等しい)かどうかを確かめます
      *
@@ -67,7 +68,6 @@ public class LogLine {
      */
     public void marge(LogLine log) {
 	mBody += "\n" + log.mBody;
-	mLineCount += log.mBody.split("\n").length;
     }
 
     @Override
@@ -82,7 +82,6 @@ public class LogLine {
 	builder.append(mPID);
 	builder.append(')');
 	builder.append('\n');
-	builder.append('\t');
 	builder.append(mBody);
 	return builder.toString();
     }
