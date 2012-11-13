@@ -21,6 +21,7 @@ import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
 
 import jp.takamichie.desktop.logcatviewer.classes.CustomOptionPane;
+import jp.takamichie.desktop.logcatviewer.classes.ProcessInfo;
 import jp.takamichie.desktop.logcatviewer.table.filter.PIDFilter;
 
 public class Main extends JFrame implements ActionListener {
@@ -253,6 +254,20 @@ public class Main extends JFrame implements ActionListener {
 	    mLogPanel.setLogLevel(LogPanel.LOGLEVEL_ERROR);
 	    break;
 	case COMMAND_FILTER_PROCESS:
+	    ArrayList<Integer> ids = new ArrayList<>();
+	    ArrayList<String> names = new ArrayList<>();
+	    for (ProcessInfo info : mLogPanel.getProcessList().values()) {
+		if (info.getName().split("\\.").length >= 3) {
+		    // アプリプロセスのみ抽出
+		    ids.add(info.getPID());
+		    names.add(info.getName());
+		}
+	    }
+	    int proc = CustomOptionPane.showDialogGetIndex(this, "プロセス", "プロセスを選択",
+		    false, names.toArray(new String[names.size()]));
+	    if (proc != -1) {
+		mLogPanel.setFilteredPID(ids.get(proc));
+	    }
 	    break;
 	case COMMAND_FILTER_TAGS:
 	    String tags = CustomOptionPane.showDialog(this, "タグ", "タグを選択",

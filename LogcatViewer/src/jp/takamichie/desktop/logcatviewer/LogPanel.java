@@ -12,8 +12,12 @@ import java.awt.event.MouseEvent;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -30,6 +34,7 @@ import javax.swing.table.TableRowSorter;
 
 import jp.takamichie.desktop.logcatviewer.classes.Device;
 import jp.takamichie.desktop.logcatviewer.classes.LogLine;
+import jp.takamichie.desktop.logcatviewer.classes.ProcessInfo;
 import jp.takamichie.desktop.logcatviewer.table.LogTable;
 import jp.takamichie.desktop.logcatviewer.table.LogTableModel;
 import jp.takamichie.desktop.logcatviewer.table.LogTableModel.LogItemListener;
@@ -47,6 +52,7 @@ public class LogPanel extends javax.swing.JPanel implements Runnable,
     public static final char LOGLEVEL_INFO = 'I';
     public static final char LOGLEVEL_WARN = 'W';
     public static final char LOGLEVEL_ERROR = 'E';
+    private static final long AUTOUPDATE_TIMER = 5000;
     @SuppressWarnings("unused")
     private Main mOwner;
     private JTable mListLog;
@@ -59,6 +65,7 @@ public class LogPanel extends javax.swing.JPanel implements Runnable,
     private TableRowSorter<LogTableModel> mLogSorter;
     private Set<RowFilter<LogTableModel, Integer>> mFilters;
     private boolean mChaseItem;
+    private HashMap<Integer, ProcessInfo> mProcessList;
     private JPopupMenu mLogListPopupMenu;
     private JMenuItem mMenuItemFilterdThisProcess;
     private JMenuItem mMenuItemFilterdThisTag;
@@ -67,6 +74,7 @@ public class LogPanel extends javax.swing.JPanel implements Runnable,
     private JMenuItem mMenuItemWatchProcess;
     @SuppressWarnings("unused")
     private int mMonitoringPID;
+    private ScheduledExecutorService mScheduler;
 
     public LogPanel(Main main) {
 	mOwner = main;
@@ -81,12 +89,20 @@ public class LogPanel extends javax.swing.JPanel implements Runnable,
 	mFilters.add(mTagFilter);
 	mMonitoringPID = PIDFilter.NOSELECT;
 
-	StickyWindow sticky = new StickyWindow("test", "message");
-	sticky.setVisible(true);
-
 	mLogSorter.setRowFilter(RowFilter.andFilter(mFilters));
 	mListLog.setRowSorter(mLogSorter);
 	addPopup(mListLog, mLogListPopupMenu);
+	// 5秒ごとに実行
+	mScheduler = Executors.newSingleThreadScheduledExecutor();
+	mScheduler.scheduleWithFixedDelay(new Runnable() {
+	    public void run() {
+		try {
+		    updateProcessList();
+		} catch (IOException e) {
+		    // do nothing
+		}
+	    }
+	}, 0, AUTOUPDATE_TIMER, TimeUnit.MILLISECONDS);
     }
 
     @Override
@@ -120,7 +136,8 @@ public class LogPanel extends javax.swing.JPanel implements Runnable,
 	mLogListPopupMenu.add(mMenuItemFilterdThisTag);
 
 	mMenuItemFilterdThisProcess = new JMenuItem("このプロセスでフィルタリング(P)");
-	mMenuItemFilterdThisProcess.setActionCommand(Main.COMMAND_FILTER_THISPROC);
+	mMenuItemFilterdThisProcess
+		.setActionCommand(Main.COMMAND_FILTER_THISPROC);
 	mMenuItemFilterdThisProcess.setMnemonic('P');
 	mMenuItemFilterdThisProcess.addActionListener(this);
 	mLogListPopupMenu.add(mMenuItemFilterdThisProcess);
@@ -147,15 +164,51 @@ public class LogPanel extends javax.swing.JPanel implements Runnable,
 	TableColumnModel columnModel = mListLog.getColumnModel();
 	columnModel.getColumn(0).setMaxWidth(10);
 	/*
-	columnModel.getColumn(0).setCellRenderer(new VerticalTopRenderer());
-	columnModel.getColumn(1).setCellRenderer(new VerticalTopRenderer());
-	columnModel.getColumn(2).setCellRenderer(new VerticalTopRenderer());
-	*/
+	 * columnModel.getColumn(0).setCellRenderer(new VerticalTopRenderer());
+	 * columnModel.getColumn(1).setCellRenderer(new VerticalTopRenderer());
+	 * columnModel.getColumn(2).setCellRenderer(new VerticalTopRenderer());
+	 */
 	columnModel.getColumn(3).setCellRenderer(new MultilineStringRenderer());
 
 	scrollPane.setColumnHeaderView(mListLog.getTableHeader());
 	scrollPane.setViewportView(mListLog);
 
+    }
+
+    public void updateProcessList() throws IOException {
+	final Process proccess = new ProcessBuilder("adb", "shell", "ps")
+		.redirectErrorStream(true).start();
+	Thread t = new Thread(new Runnable() {
+
+	    @Override
+	    public void run() {
+		HashMap<Integer, ProcessInfo> tempList = new HashMap<>();
+		try (BufferedReader reader = new BufferedReader(
+			new InputStreamReader(proccess.getInputStream()))) {
+		    String line;
+		    Pattern pattern = Pattern.compile(ProcessInfo.PS_REGEX,
+			    Pattern.DOTALL);
+		    while ((line = reader.readLine()) != null) {
+			Matcher m = pattern.matcher(line);
+			if (m.matches()) {
+			    ProcessInfo info = new ProcessInfo(m);
+			    tempList.put(info.getPID(), info);
+			}
+		    }
+		} catch (IOException e) {
+		    e.printStackTrace();
+		}
+		mProcessList = tempList;
+
+	    }
+	});
+	t.start();
+    }
+
+    // / 外部向けgetter & setter
+
+    public HashMap<Integer, ProcessInfo> getProcessList() {
+	return mProcessList;
     }
 
     /**
@@ -234,7 +287,7 @@ public class LogPanel extends javax.swing.JPanel implements Runnable,
      * 「ログを追跡」オプションが有効の時に、最後のアイテムを選択します。
      */
     public void selectLastItemIsSetting() {
-	if(mChaseItem){
+	if (mChaseItem) {
 	    selectLastItem();
 	}
     }
@@ -250,7 +303,9 @@ public class LogPanel extends javax.swing.JPanel implements Runnable,
 
     /**
      * クリップボードに文字列をコピーします
-     * @param string コピーする文字列
+     *
+     * @param string
+     *            コピーする文字列
      */
     private void copyToClipboard(String string) {
 	Toolkit kit = Toolkit.getDefaultToolkit();
@@ -287,8 +342,8 @@ public class LogPanel extends javax.swing.JPanel implements Runnable,
 	try (BufferedReader reader = new BufferedReader(new InputStreamReader(
 		mProccess.getInputStream()))) {
 	    String line;
-	    Pattern pattern = Pattern.compile(LogLine.LOGCAT_REGEX_MSEC_IGNORED,
-		    Pattern.DOTALL);
+	    Pattern pattern = Pattern.compile(
+		    LogLine.LOGCAT_REGEX_MSEC_IGNORED, Pattern.DOTALL);
 	    while ((line = reader.readLine()) != null) {
 		Matcher m = pattern.matcher(line);
 		if (m.matches()) {
