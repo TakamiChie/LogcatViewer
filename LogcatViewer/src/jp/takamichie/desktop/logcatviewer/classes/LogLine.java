@@ -12,6 +12,7 @@ public class LogLine {
     private String mTags;
     private int mPID;
     private String mBody;
+    private int mLineCount;
 
     public LogLine(Matcher m) {
 	this.mTimeStamp = m.group(1);
@@ -19,6 +20,7 @@ public class LogLine {
 	this.mTags = m.group(3);
 	this.mPID = Integer.parseInt(m.group(4));
 	this.mBody = m.group(5);
+	this.mLineCount = mBody.split("\n").length;
     }
 
     public String getTimeStamp() {
@@ -41,23 +43,33 @@ public class LogLine {
 	return mBody;
     }
 
+    public int getLineCount() {
+	return mLineCount;
+    }
+
     /**
      * 対象となるアイテムがこのアイテムと近い(Body以外の値が等しい)かどうかを確かめます
-     * @param log 比較対象となるログアイテム
+     *
+     * @param log
+     *            比較対象となるログアイテム
      * @return アイテムがこのアイテムと近いかどうか
      */
-    public boolean same(LogLine log){
-	return mTimeStamp == log.mTimeStamp && mLevel == log.getLevel() &&
-		mPID == log.getPID() && mTags.equals(getTags());
+    public boolean same(LogLine log) {
+	return mTimeStamp.equals(log.mTimeStamp) && mLevel == log.getLevel()
+		&& mPID == log.getPID() && mTags.equals(getTags());
     }
 
     /**
      * 対象となるアイテムのBodyをこのアイテムにマージします。
-     * @param log マージするログアイテム
+     *
+     * @param log
+     *            マージするログアイテム
      */
-    public void marge(LogLine log){
-	mBody += "\n" + log.getBody();
+    public void marge(LogLine log) {
+	mBody += "\n" + log.mBody;
+	mLineCount += log.mBody.split("\n").length;
     }
+
     @Override
     public String toString() {
 	StringBuilder builder = new StringBuilder();

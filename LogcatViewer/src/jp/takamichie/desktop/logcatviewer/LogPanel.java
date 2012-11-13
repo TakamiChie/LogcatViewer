@@ -4,35 +4,56 @@ import java.awt.BorderLayout;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import javax.swing.JList;
 import javax.swing.JScrollPane;
+import javax.swing.JTable;
 import javax.swing.ListSelectionModel;
+import javax.swing.RowFilter;
 import javax.swing.ScrollPaneConstants;
+import javax.swing.SwingUtilities;
+import javax.swing.table.TableColumnModel;
+import javax.swing.table.TableRowSorter;
 
 import jp.takamichie.desktop.logcatviewer.classes.Device;
 import jp.takamichie.desktop.logcatviewer.classes.LogLine;
-import jp.takamichie.desktop.logcatviewer.list.LogCellRenderer;
-import jp.takamichie.desktop.logcatviewer.list.LogListModel;
+import jp.takamichie.desktop.logcatviewer.table.LogLevelFilter;
+import jp.takamichie.desktop.logcatviewer.table.LogTable;
+import jp.takamichie.desktop.logcatviewer.table.LogTableModel;
+import jp.takamichie.desktop.logcatviewer.table.MultilineStringRenderer;
+import jp.takamichie.desktop.logcatviewer.table.VerticalTopRenderer;
 
 public class LogPanel extends javax.swing.JPanel implements Runnable {
+    private static final Object[] COLUMN_HEADERS = new Object[] { "", "時間",
+	    "タグ", "" };
     public static final char LOGLEVEL_VERBOSE = 'V';
     public static final char LOGLEVEL_DEBUG = 'D';
     public static final char LOGLEVEL_INFO = 'I';
     public static final char LOGLEVEL_WARN = 'W';
     public static final char LOGLEVEL_ERROR = 'E';
     private Main mOwner;
-    private JList<LogLine> mListLog;
+    private JTable mListLog;
     private Thread mLogcatThread;
     private Process mProccess;
+    private LogTableModel mTableModel;
+    private LogLevelFilter mLogLevelFilter;
+    private TableRowSorter<LogTableModel> mLogSorter;
+    private Set<RowFilter<LogTableModel, Integer>> mFilters;
     private boolean mChaseItem;
-    private LogLine mLastLogItem;
 
     public LogPanel(Main main) {
 	mOwner = main;
 	initializeComponent();
+	mLogSorter = new TableRowSorter<LogTableModel>(mTableModel);
+	mLogLevelFilter = new LogLevelFilter();
+	mFilters = new HashSet<>();
+	mFilters.add(mLogLevelFilter);
+
+	mLogSorter.setRowFilter(RowFilter.andFilter(mFilters));
+	mListLog.setRowSorter(mLogSorter);
     }
 
     @Override
@@ -50,11 +71,22 @@ public class LogPanel extends javax.swing.JPanel implements Runnable {
 		.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
 	add(scrollPane, BorderLayout.CENTER);
 
-	mListLog = new JList<>();
-	mListLog.setModel(new LogListModel());
-	mListLog.setCellRenderer(new LogCellRenderer());
-	mListLog.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+	mTableModel = new LogTableModel(COLUMN_HEADERS, 0);
+	mListLog = new LogTable(mTableModel);
 
+	mListLog.setShowGrid(false);
+	mListLog.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+	mListLog.setAutoResizeMode(JTable.AUTO_RESIZE_LAST_COLUMN);
+	mTableModel.setOwner(mListLog);
+
+	TableColumnModel columnModel = mListLog.getColumnModel();
+	columnModel.getColumn(0).setMaxWidth(10);
+	columnModel.getColumn(0).setCellRenderer(new VerticalTopRenderer());
+	columnModel.getColumn(1).setCellRenderer(new VerticalTopRenderer());
+	columnModel.getColumn(2).setCellRenderer(new VerticalTopRenderer());
+	columnModel.getColumn(3).setCellRenderer(new MultilineStringRenderer());
+
+	scrollPane.setColumnHeaderView(mListLog.getTableHeader());
 	scrollPane.setViewportView(mListLog);
 
     }
@@ -94,6 +126,8 @@ public class LogPanel extends javax.swing.JPanel implements Runnable {
      *            ログレベル
      */
     public void setLogLevel(char loglevel) {
+	mLogLevelFilter.setLogLevel(loglevel);
+	mLogSorter.allRowsChanged();
     }
 
     /**
@@ -102,24 +136,26 @@ public class LogPanel extends javax.swing.JPanel implements Runnable {
      * @param logLine
      *            追加する行を示す{@link LogLine}オブジェクト
      */
-    private void addlog(LogLine logLine) {
-	if(mLastLogItem != null && mLastLogItem.same(logLine)){
-	    mLastLogItem.marge(logLine);
-	    mListLog.invalidate();
-	}else{
-	    ((LogListModel)mListLog.getModel()).addElement(logLine);
-	    mLastLogItem = logLine;
-	}
-	if(mChaseItem){
-	    selectLastItem();
-	}
+    private void addlog(final LogLine logLine) {
+	SwingUtilities.invokeLater(new Runnable() {
+	    @Override
+	    public void run() {
+		mTableModel.addRow(logLine);
+		if(mChaseItem){
+		    selectLastItem();
+		}
+	    }
+	});
     }
 
     /**
      * 最後のアイテムを選択します
      */
     private void selectLastItem() {
-	mListLog.ensureIndexIsVisible(mListLog.getModel().getSize() - 1);
+	int rc = mTableModel.getRowCount();
+	mListLog.scrollRectToVisible(mListLog.getCellRect(
+		rc, 0, true));
+	mListLog.changeSelection(rc, 0, true, false);
     }
 
     /// getter & setter

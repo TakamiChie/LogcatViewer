@@ -18,6 +18,7 @@ import javax.swing.KeyStroke;
 import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
 
+
 public class Main extends JFrame implements ActionListener {
     private static final String COMMAND_LOGLEVEL_VERBOSE = "logverbose";
     private static final String COMMAND_LOGLEVEL_DEBUG = "logdebug";
