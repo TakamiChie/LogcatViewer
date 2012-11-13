@@ -14,7 +14,6 @@ import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JRadioButtonMenuItem;
 import javax.swing.KeyStroke;
-import javax.swing.MenuElement;
 import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
 
@@ -24,6 +23,8 @@ public class Main extends JFrame implements ActionListener {
     private static final String COMMAND_LOGLEVEL_INFO = "loginfo";
     private static final String COMMAND_LOGLEVEL_WARN = "logwarn";
     private static final String COMMAND_LOGLEVEL_ERROR = "logerror";
+    private static final String COMMAND_FILTER_PROCESS = "procfilter";
+    private static final String COMMAND_FILTER_CHASEITEM = "chaseitem";
     private LogPanel mLogPanel;
     private JMenu mMenuFilters;
     private JMenu mMenuLogLevels;
@@ -32,8 +33,10 @@ public class Main extends JFrame implements ActionListener {
     private JRadioButtonMenuItem mMenuItemLogLevelVerbose;
     private JRadioButtonMenuItem mMenuItemLogLevelWarn;
     private JRadioButtonMenuItem mMenuItemLogLevelError;
-    private final ButtonGroup buttonGroup = new ButtonGroup();
+    private final ButtonGroup mButtonGroupLogLevels = new ButtonGroup();
     private JMenuBar mMenuBar;
+    private JMenuItem mMenuItemProcess;
+    private JMenuItem mMenuItemChaseItem;
 
     public static void main(String[] args) {
 	EventQueue.invokeLater(new Runnable() {
@@ -54,12 +57,6 @@ public class Main extends JFrame implements ActionListener {
 	initializeComponent();
 	try {
 	    mLogPanel.setDevice(null);
-	    ButtonGroup logLevelGroup = new ButtonGroup();
-	    for(MenuElement item : mMenuLogLevels.getSubElements()){
-		if(item instanceof JRadioButtonMenuItem){
-		    logLevelGroup.add((JRadioButtonMenuItem) item);
-		}
-	    }
 	    // TODO: 直前のウィンドウ位置の復元
 	    this.setSize(400, 300);
 	} catch (IOException e) {
@@ -76,7 +73,7 @@ public class Main extends JFrame implements ActionListener {
 	}
 
 	setTitle("LogcatViewer");
-	mLogPanel = new LogPanel();
+	mLogPanel = new LogPanel(this);
 	getContentPane().add(mLogPanel, BorderLayout.CENTER);
 
 	mMenuBar = new JMenuBar();
@@ -91,7 +88,8 @@ public class Main extends JFrame implements ActionListener {
 	mMenuFilters.add(mMenuLogLevels);
 
 	mMenuItemLogLevelVerbose = new JRadioButtonMenuItem("VERBOSE");
-	buttonGroup.add(mMenuItemLogLevelVerbose);
+	mButtonGroupLogLevels.add(mMenuItemLogLevelVerbose);
+	mMenuItemLogLevelVerbose.setSelected(true);
 	mMenuItemLogLevelVerbose.setMnemonic('V');
 	mMenuItemLogLevelVerbose.setAccelerator(KeyStroke.getKeyStroke(
 		KeyEvent.VK_5, 0));
@@ -100,7 +98,7 @@ public class Main extends JFrame implements ActionListener {
 	mMenuLogLevels.add(mMenuItemLogLevelVerbose);
 
 	mMenuItemLogLevelDebug = new JRadioButtonMenuItem("DEBUG");
-	buttonGroup.add(mMenuItemLogLevelDebug);
+	mButtonGroupLogLevels.add(mMenuItemLogLevelDebug);
 	mMenuItemLogLevelDebug.setMnemonic('D');
 	mMenuItemLogLevelDebug.setAccelerator(KeyStroke.getKeyStroke(
 		KeyEvent.VK_4, 0));
@@ -109,7 +107,7 @@ public class Main extends JFrame implements ActionListener {
 	mMenuLogLevels.add(mMenuItemLogLevelDebug);
 
 	mMenuItemLogLevelInfo = new JRadioButtonMenuItem("INFO");
-	buttonGroup.add(mMenuItemLogLevelInfo);
+	mButtonGroupLogLevels.add(mMenuItemLogLevelInfo);
 	mMenuItemLogLevelInfo.setMnemonic('I');
 	mMenuItemLogLevelInfo.setAccelerator(KeyStroke.getKeyStroke(
 		KeyEvent.VK_3, 0));
@@ -118,7 +116,7 @@ public class Main extends JFrame implements ActionListener {
 	mMenuLogLevels.add(mMenuItemLogLevelInfo);
 
 	mMenuItemLogLevelWarn = new JRadioButtonMenuItem("WARN");
-	buttonGroup.add(mMenuItemLogLevelWarn);
+	mButtonGroupLogLevels.add(mMenuItemLogLevelWarn);
 	mMenuItemLogLevelWarn.setMnemonic('I');
 	mMenuItemLogLevelWarn.setAccelerator(KeyStroke.getKeyStroke(
 		KeyEvent.VK_2, 0));
@@ -127,7 +125,7 @@ public class Main extends JFrame implements ActionListener {
 	mMenuLogLevels.add(mMenuItemLogLevelWarn);
 
 	mMenuItemLogLevelError = new JRadioButtonMenuItem("ERROR");
-	buttonGroup.add(mMenuItemLogLevelError);
+	mButtonGroupLogLevels.add(mMenuItemLogLevelError);
 	mMenuItemLogLevelError.setMnemonic('E');
 	mMenuItemLogLevelError.setAccelerator(KeyStroke.getKeyStroke(
 		KeyEvent.VK_1, 0));
@@ -135,12 +133,21 @@ public class Main extends JFrame implements ActionListener {
 	mMenuItemLogLevelError.addActionListener(this);
 	mMenuLogLevels.add(mMenuItemLogLevelError);
 
-	JMenuItem mMenuItemProcess = new JMenuItem("プロセス...");
+	mMenuItemProcess = new JMenuItem("プロセス...");
 	mMenuItemProcess.setMnemonic('P');
 	mMenuItemProcess.setAccelerator(KeyStroke
 		.getKeyStroke(KeyEvent.VK_P, 0));
+	mMenuItemProcess.setActionCommand(COMMAND_FILTER_PROCESS);
+	mMenuItemProcess.addActionListener(this);
 	mMenuFilters.add(mMenuItemProcess);
 
+	mMenuItemChaseItem = new JMenuItem("ログを追尾(C)");
+	mMenuItemChaseItem.setMnemonic('C');
+	mMenuItemChaseItem.setAccelerator(KeyStroke
+		.getKeyStroke(KeyEvent.VK_C, 0));
+	mMenuItemChaseItem.setActionCommand(COMMAND_FILTER_CHASEITEM);
+	mMenuItemChaseItem.addActionListener(this);
+	mMenuFilters.add(mMenuItemChaseItem);
     }
 
     @Override
@@ -149,7 +156,24 @@ public class Main extends JFrame implements ActionListener {
 	case COMMAND_LOGLEVEL_VERBOSE:
 	    mLogPanel.setLogLevel(LogPanel.LOGLEVEL_VERBOSE);
 	    break;
-
+	case COMMAND_LOGLEVEL_DEBUG:
+	    mLogPanel.setLogLevel(LogPanel.LOGLEVEL_DEBUG);
+	    break;
+	case COMMAND_LOGLEVEL_INFO:
+	    mLogPanel.setLogLevel(LogPanel.LOGLEVEL_INFO);
+	    break;
+	case COMMAND_LOGLEVEL_WARN:
+	    mLogPanel.setLogLevel(LogPanel.LOGLEVEL_WARN);
+	    break;
+	case COMMAND_LOGLEVEL_ERROR:
+	    mLogPanel.setLogLevel(LogPanel.LOGLEVEL_ERROR);
+	    break;
+	case COMMAND_FILTER_PROCESS:
+	case COMMAND_FILTER_CHASEITEM:
+	    boolean state = !mLogPanel.isChaseItem();
+	    mLogPanel.setChaseItem(state);
+	    mMenuItemChaseItem.setSelected(state);
+	    break;
 	default:
 	    break;
 	}

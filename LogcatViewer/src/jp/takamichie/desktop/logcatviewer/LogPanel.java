@@ -35,6 +35,7 @@ public class LogPanel extends javax.swing.JPanel implements Runnable {
     public static final char LOGLEVEL_INFO = 'I';
     public static final char LOGLEVEL_WARN = 'W';
     public static final char LOGLEVEL_ERROR = 'E';
+    private Main mOwner;
     private JTable mListLog;
     private Thread mLogcatThread;
     private Process mProccess;
@@ -42,8 +43,10 @@ public class LogPanel extends javax.swing.JPanel implements Runnable {
     private LogLevelFilter mLogLevelFilter;
     private TableRowSorter<LogTableModel> mLogSorter;
     private Set<RowFilter<LogTableModel, Integer>> mFilters;
+    private boolean mChaseItem;
 
-    public LogPanel() {
+    public LogPanel(Main main) {
+	mOwner = main;
 	initializeComponent();
 	mLogSorter = new TableRowSorter<LogTableModel>(mTableModel);
 	mLogLevelFilter = new LogLevelFilter();
@@ -131,8 +134,37 @@ public class LogPanel extends javax.swing.JPanel implements Runnable {
      */
     private void addlog(LogLine logLine) {
 	mTableModel.addRow(logLine);
+	if(mChaseItem){
+	    selectLastItem();
+	}
+    }
+
+    /**
+     * 最後のアイテムを選択します
+     */
+    private void selectLastItem() {
 	mListLog.scrollRectToVisible(mListLog.getCellRect(
 		mTableModel.getRowCount(), 0, true));
+    }
+
+    /// getter & setter
+    /**
+     * 最後のアイテムを常に追尾するかどうかを設定します
+     * @param state 最後のアイテムを常に追尾するかどうか
+     */
+    public void setChaseItem(boolean state){
+	this.mChaseItem = state;
+	if(state){
+	    selectLastItem();
+	}
+    }
+
+    /**
+     * 最後のアイテムを常に追尾するかどうかを取得します
+     * @return 最後のアイテムを常に追尾するかどうかを示す値
+     */
+    public boolean isChaseItem() {
+	return mChaseItem;
     }
 
     @Override
@@ -168,17 +200,17 @@ public class LogPanel extends javax.swing.JPanel implements Runnable {
 	    Component c = super.prepareRenderer(renderer, row, column);
 	    Color fg;
 	    // ログレベルに応じて文字の色を変更
-	    switch ((char) mTableModel.getValueAt(row, 0)) {
-	    case 'E':
+	    switch ((char) getValueAt(row, 0)) {
+	    case LOGLEVEL_ERROR:
 		fg = Color.RED;
 		break;
-	    case 'W':
+	    case LOGLEVEL_WARN:
 		fg = new Color(255, 128, 0);
 		break;
-	    case 'I':
+	    case LOGLEVEL_INFO:
 		fg = new Color(0, 128, 0);
 		break;
-	    case 'D':
+	    case LOGLEVEL_DEBUG:
 		fg = Color.BLUE;
 		break;
 	    default:
