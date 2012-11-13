@@ -8,6 +8,7 @@ import java.awt.event.KeyEvent;
 import java.io.IOException;
 
 import javax.swing.ButtonGroup;
+import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JFrame;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
@@ -36,7 +37,7 @@ public class Main extends JFrame implements ActionListener {
     private final ButtonGroup mButtonGroupLogLevels = new ButtonGroup();
     private JMenuBar mMenuBar;
     private JMenuItem mMenuItemProcess;
-    private JMenuItem mMenuItemChaseItem;
+    private JCheckBoxMenuItem mMenuItemChaseItem;
 
     public static void main(String[] args) {
 	EventQueue.invokeLater(new Runnable() {
@@ -141,7 +142,7 @@ public class Main extends JFrame implements ActionListener {
 	mMenuItemProcess.addActionListener(this);
 	mMenuFilters.add(mMenuItemProcess);
 
-	mMenuItemChaseItem = new JMenuItem("ログを追尾(C)");
+	mMenuItemChaseItem = new JCheckBoxMenuItem("ログを追尾(C)");
 	mMenuItemChaseItem.setMnemonic('C');
 	mMenuItemChaseItem.setAccelerator(KeyStroke
 		.getKeyStroke(KeyEvent.VK_C, 0));
