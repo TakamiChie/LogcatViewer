@@ -7,6 +7,7 @@ import java.awt.event.ActionListener;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 import java.io.IOException;
+import java.util.ArrayList;
 
 import javax.swing.ButtonGroup;
 import javax.swing.JCheckBoxMenuItem;
@@ -19,6 +20,7 @@ import javax.swing.KeyStroke;
 import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
 
+import jp.takamichie.desktop.logcatviewer.classes.CustomOptionPane;
 import jp.takamichie.desktop.logcatviewer.table.filter.PIDFilter;
 
 public class Main extends JFrame implements ActionListener {
@@ -55,7 +57,8 @@ public class Main extends JFrame implements ActionListener {
     private JMenuItem mMenuItemCopyToClipboard;
     private JMenuItem mMenuItemCopyToClipboardBodyOnly;
     private JMenuItem mMenuItemFilterdThisProcess;
-    private JCheckBoxMenuItem mMenuItemEraseFilter;
+    private JMenuItem mMenuItemEraseFilter;
+    private ArrayList<String> mRecentTagList;
 
     public static void main(String[] args) {
 	EventQueue.invokeLater(new Runnable() {
@@ -78,6 +81,7 @@ public class Main extends JFrame implements ActionListener {
 	    mLogPanel.setDevice(null);
 	    // TODO: 直前のウィンドウ位置の復元
 	    this.setSize(400, 300);
+	    mRecentTagList = new ArrayList<String>();
 	} catch (IOException e) {
 	    e.printStackTrace();
 	}
@@ -168,7 +172,7 @@ public class Main extends JFrame implements ActionListener {
 	mMenuItemFilterdTags.addActionListener(this);
 	mMenuFilters.add(mMenuItemFilterdTags);
 
-	mMenuItemEraseFilter = new JCheckBoxMenuItem("フィルタをすべて解除(E)");
+	mMenuItemEraseFilter = new JMenuItem("フィルタをすべて解除(E)");
 	mMenuItemEraseFilter.setMnemonic('E');
 	mMenuItemEraseFilter.setAccelerator(KeyStroke.getKeyStroke(
 		KeyEvent.VK_ESCAPE, 0));
@@ -251,6 +255,14 @@ public class Main extends JFrame implements ActionListener {
 	case COMMAND_FILTER_PROCESS:
 	    break;
 	case COMMAND_FILTER_TAGS:
+	    String tags = CustomOptionPane.showDialog(this, "タグ", "タグを選択",
+		    true,
+		    mRecentTagList.toArray(new String[mRecentTagList.size()]));
+	    if (tags != null) {
+		mRecentTagList.remove(tags);
+		mRecentTagList.add(tags);
+		mLogPanel.setFilteredTag(tags);
+	    }
 	    break;
 	case COMMAND_FILTER_ERASE:
 	    mMenuItemLogLevelVerbose.doClick();

@@ -32,13 +32,14 @@ import jp.takamichie.desktop.logcatviewer.classes.Device;
 import jp.takamichie.desktop.logcatviewer.classes.LogLine;
 import jp.takamichie.desktop.logcatviewer.table.LogTable;
 import jp.takamichie.desktop.logcatviewer.table.LogTableModel;
+import jp.takamichie.desktop.logcatviewer.table.LogTableModel.LogItemListener;
 import jp.takamichie.desktop.logcatviewer.table.MultilineStringRenderer;
 import jp.takamichie.desktop.logcatviewer.table.filter.LogLevelFilter;
 import jp.takamichie.desktop.logcatviewer.table.filter.PIDFilter;
 import jp.takamichie.desktop.logcatviewer.table.filter.TagFilter;
 
 public class LogPanel extends javax.swing.JPanel implements Runnable,
-	ActionListener {
+	ActionListener, LogItemListener {
     private static final Object[] COLUMN_HEADERS = new Object[] { "", "時間",
 	    "タグ", "" };
     public static final char LOGLEVEL_VERBOSE = 'V';
@@ -64,6 +65,8 @@ public class LogPanel extends javax.swing.JPanel implements Runnable,
     private JMenuItem mMenuItemCopyToClipboard;
     private JMenuItem mMenuItemCopyToClipboardBodyOnly;
     private JMenuItem mMenuItemWatchProcess;
+    @SuppressWarnings("unused")
+    private int mMonitoringPID;
 
     public LogPanel(Main main) {
 	mOwner = main;
@@ -76,6 +79,10 @@ public class LogPanel extends javax.swing.JPanel implements Runnable,
 	mFilters.add(mLogLevelFilter);
 	mFilters.add(mPIDFilter);
 	mFilters.add(mTagFilter);
+	mMonitoringPID = PIDFilter.NOSELECT;
+
+	StickyWindow sticky = new StickyWindow("test", "message");
+	sticky.setVisible(true);
 
 	mLogSorter.setRowFilter(RowFilter.andFilter(mFilters));
 	mListLog.setRowSorter(mLogSorter);
@@ -97,7 +104,7 @@ public class LogPanel extends javax.swing.JPanel implements Runnable,
 		.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
 	add(scrollPane, BorderLayout.CENTER);
 
-	mTableModel = new LogTableModel(COLUMN_HEADERS, 0);
+	mTableModel = new LogTableModel(this, COLUMN_HEADERS, 0);
 	mListLog = new LogTable(mTableModel);
 
 	mListLog.setShowGrid(false);
@@ -241,6 +248,16 @@ public class LogPanel extends javax.swing.JPanel implements Runnable,
 	mListLog.changeSelection(rc, 0, true, false);
     }
 
+    /**
+     * クリップボードに文字列をコピーします
+     * @param string コピーする文字列
+     */
+    private void copyToClipboard(String string) {
+	Toolkit kit = Toolkit.getDefaultToolkit();
+	Clipboard clip = kit.getSystemClipboard();
+	clip.setContents(new StringSelection(string), null);
+    }
+
     // / getter & setter
 
     /**
@@ -316,6 +333,7 @@ public class LogPanel extends javax.swing.JPanel implements Runnable,
 	    setFilteredPID(selected.getPID());
 	    break;
 	case Main.COMMAND_FILTER_WATCHPROC:
+	    mMonitoringPID = selected.getPID();
 	    break;
 	case Main.COMMAND_FILTER_COPY:
 	    copyToClipboard(selected.toString());
@@ -328,9 +346,7 @@ public class LogPanel extends javax.swing.JPanel implements Runnable,
 	}
     }
 
-    private void copyToClipboard(String string) {
-	Toolkit kit = Toolkit.getDefaultToolkit();
-	Clipboard clip = kit.getSystemClipboard();
-	clip.setContents(new StringSelection(string), null);
+    @Override
+    public void logItemRecieved(LogLine oldItem, LogLine newItem) {
     }
 }

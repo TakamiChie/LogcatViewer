@@ -15,10 +15,16 @@ public class LogTableModel extends DefaultTableModel {
 
     private ArrayList<LogLine> mLogLines;
     private LogLine mLastLogItem;
+    private LogItemListener mListener;
 
-    public LogTableModel(Object[] columnHeaders, int i) {
+    public interface LogItemListener {
+	void logItemRecieved(LogLine oldItem, LogLine newItem);
+    }
+
+    public LogTableModel(LogItemListener listener, Object[] columnHeaders, int i) {
 	super(columnHeaders, i);
-	mLogLines = new ArrayList<>();
+	this.mListener = listener;
+	this.mLogLines = new ArrayList<>();
     }
 
     public void addRow(LogLine logLine) {
@@ -28,6 +34,9 @@ public class LogTableModel extends DefaultTableModel {
 	    super.setValueAt(mLastLogItem.getBody(), rc, 3);
 	} else {
 	    mLogLines.add(logLine);
+	    if (mListener != null) {
+		mListener.logItemRecieved(mLastLogItem, logLine);
+	    }
 	    mLastLogItem = logLine;
 	    super.addRow(new Object[] { logLine.getLevel(),
 		    logLine.getTimeStamp(), logLine.getTags(),
