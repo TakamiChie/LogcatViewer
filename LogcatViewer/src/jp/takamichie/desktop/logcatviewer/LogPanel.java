@@ -152,7 +152,7 @@ public class LogPanel extends javax.swing.JPanel implements Runnable {
      * 最後のアイテムを選択します
      */
     private void selectLastItem() {
-	int rc = mTableModel.getRowCount();
+	int rc = mTableModel.getRowCount() - 1;
 	mListLog.scrollRectToVisible(mListLog.getCellRect(
 		rc, 0, true));
 	mListLog.changeSelection(rc, 0, true, false);
