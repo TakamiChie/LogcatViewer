@@ -177,6 +177,7 @@ public class LogPanel extends javax.swing.JPanel implements Runnable,
      */
     public void setFilteredPID(int pid) {
 	mPIDFilter.setPID(pid);
+	selectLastItemIsSetting();
 	mLogSorter.allRowsChanged();
     }
 
@@ -188,6 +189,7 @@ public class LogPanel extends javax.swing.JPanel implements Runnable,
      */
     public void setFilteredTag(String tag) {
 	mTagFilter.setTag(tag);
+	selectLastItemIsSetting();
 	mLogSorter.allRowsChanged();
     }
 
@@ -199,6 +201,7 @@ public class LogPanel extends javax.swing.JPanel implements Runnable,
      */
     public void setLogLevel(char loglevel) {
 	mLogLevelFilter.setLogLevel(loglevel);
+	selectLastItemIsSetting();
 	mLogSorter.allRowsChanged();
     }
 
@@ -215,11 +218,18 @@ public class LogPanel extends javax.swing.JPanel implements Runnable,
 	    @Override
 	    public void run() {
 		mTableModel.addRow(logLine);
-		if (mChaseItem) {
-		    selectLastItem();
-		}
+		selectLastItemIsSetting();
 	    }
 	});
+    }
+
+    /**
+     * 「ログを追跡」オプションが有効の時に、最後のアイテムを選択します。
+     */
+    public void selectLastItemIsSetting() {
+	if(mChaseItem){
+	    selectLastItem();
+	}
     }
 
     /**
@@ -260,7 +270,7 @@ public class LogPanel extends javax.swing.JPanel implements Runnable,
 	try (BufferedReader reader = new BufferedReader(new InputStreamReader(
 		mProccess.getInputStream()))) {
 	    String line;
-	    Pattern pattern = Pattern.compile(LogLine.LOGCAT_REGEX,
+	    Pattern pattern = Pattern.compile(LogLine.LOGCAT_REGEX_MSEC_IGNORED,
 		    Pattern.DOTALL);
 	    while ((line = reader.readLine()) != null) {
 		Matcher m = pattern.matcher(line);
