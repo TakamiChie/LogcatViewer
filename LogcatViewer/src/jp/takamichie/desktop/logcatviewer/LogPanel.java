@@ -1,60 +1,38 @@
 package jp.takamichie.desktop.logcatviewer;
 
 import java.awt.BorderLayout;
-import java.awt.Color;
-import java.awt.Component;
-import java.awt.Insets;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.swing.JList;
 import javax.swing.JScrollPane;
-import javax.swing.JTable;
-import javax.swing.JTextArea;
 import javax.swing.ListSelectionModel;
-import javax.swing.RowFilter;
 import javax.swing.ScrollPaneConstants;
-import javax.swing.table.DefaultTableModel;
-import javax.swing.table.TableCellRenderer;
-import javax.swing.table.TableColumnModel;
-import javax.swing.table.TableRowSorter;
 
 import jp.takamichie.desktop.logcatviewer.classes.Device;
 import jp.takamichie.desktop.logcatviewer.classes.LogLine;
+import jp.takamichie.desktop.logcatviewer.list.LogCellRenderer;
+import jp.takamichie.desktop.logcatviewer.list.LogListModel;
 
 public class LogPanel extends javax.swing.JPanel implements Runnable {
-    private static final Object[] COLUMN_HEADERS = new Object[] { "", "時間",
-	    "タグ", "" };
     public static final char LOGLEVEL_VERBOSE = 'V';
     public static final char LOGLEVEL_DEBUG = 'D';
     public static final char LOGLEVEL_INFO = 'I';
     public static final char LOGLEVEL_WARN = 'W';
     public static final char LOGLEVEL_ERROR = 'E';
     private Main mOwner;
-    private JTable mListLog;
+    private JList<LogLine> mListLog;
     private Thread mLogcatThread;
     private Process mProccess;
-    private LogTableModel mTableModel;
-    private LogLevelFilter mLogLevelFilter;
-    private TableRowSorter<LogTableModel> mLogSorter;
-    private Set<RowFilter<LogTableModel, Integer>> mFilters;
     private boolean mChaseItem;
+    private LogLine mLastLogItem;
 
     public LogPanel(Main main) {
 	mOwner = main;
 	initializeComponent();
-	mLogSorter = new TableRowSorter<LogTableModel>(mTableModel);
-	mLogLevelFilter = new LogLevelFilter();
-	mFilters = new HashSet<>();
-	mFilters.add(mLogLevelFilter);
-
-	mLogSorter.setRowFilter(RowFilter.andFilter(mFilters));
-	mListLog.setRowSorter(mLogSorter);
     }
 
     @Override
@@ -67,22 +45,16 @@ public class LogPanel extends javax.swing.JPanel implements Runnable {
 
     private void initializeComponent() {
 	setLayout(new BorderLayout(0, 0));
-	mTableModel = new LogTableModel(COLUMN_HEADERS, 0);
 	JScrollPane scrollPane = new JScrollPane();
 	scrollPane
 		.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
 	add(scrollPane, BorderLayout.CENTER);
 
-	mListLog = new LogTable(mTableModel);
-
-	mListLog.setShowGrid(false);
+	mListLog = new JList<>();
+	mListLog.setModel(new LogListModel());
+	mListLog.setCellRenderer(new LogCellRenderer());
 	mListLog.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-	mListLog.setAutoResizeMode(JTable.AUTO_RESIZE_NEXT_COLUMN);
 
-	TableColumnModel columnModel = mListLog.getColumnModel();
-	columnModel.getColumn(0).setMaxWidth(10);
-
-	scrollPane.setColumnHeaderView(mListLog.getTableHeader());
 	scrollPane.setViewportView(mListLog);
 
     }
@@ -122,8 +94,6 @@ public class LogPanel extends javax.swing.JPanel implements Runnable {
      *            ログレベル
      */
     public void setLogLevel(char loglevel) {
-	mLogLevelFilter.setLogLevel(loglevel);
-	mLogSorter.allRowsChanged();
     }
 
     /**
@@ -133,7 +103,13 @@ public class LogPanel extends javax.swing.JPanel implements Runnable {
      *            追加する行を示す{@link LogLine}オブジェクト
      */
     private void addlog(LogLine logLine) {
-	mTableModel.addRow(logLine);
+	if(mLastLogItem != null && mLastLogItem.same(logLine)){
+	    mLastLogItem.marge(logLine);
+	    mListLog.invalidate();
+	}else{
+	    ((LogListModel)mListLog.getModel()).addElement(logLine);
+	    mLastLogItem = logLine;
+	}
 	if(mChaseItem){
 	    selectLastItem();
 	}
@@ -143,8 +119,7 @@ public class LogPanel extends javax.swing.JPanel implements Runnable {
      * 最後のアイテムを選択します
      */
     private void selectLastItem() {
-	mListLog.scrollRectToVisible(mListLog.getCellRect(
-		mTableModel.getRowCount(), 0, true));
+	mListLog.ensureIndexIsVisible(mListLog.getModel().getSize() - 1);
     }
 
     /// getter & setter
@@ -183,149 +158,5 @@ public class LogPanel extends javax.swing.JPanel implements Runnable {
 	} catch (IOException e) {
 	    e.printStackTrace();
 	}
-    }
-
-    /**
-     * ログ表示機能を付与した{@link JTable}
-     */
-    class LogTable extends JTable {
-
-	public LogTable(DefaultTableModel tableModel) {
-	    super(tableModel);
-	}
-
-	@Override
-	public Component prepareRenderer(TableCellRenderer renderer, int row,
-		int column) {
-	    Component c = super.prepareRenderer(renderer, row, column);
-	    Color fg;
-	    // ログレベルに応じて文字の色を変更
-	    switch ((char) getValueAt(row, 0)) {
-	    case LOGLEVEL_ERROR:
-		fg = Color.RED;
-		break;
-	    case LOGLEVEL_WARN:
-		fg = new Color(255, 128, 0);
-		break;
-	    case LOGLEVEL_INFO:
-		fg = new Color(0, 128, 0);
-		break;
-	    case LOGLEVEL_DEBUG:
-		fg = Color.BLUE;
-		break;
-	    default:
-		fg = Color.BLACK;
-		break;
-	    }
-	    c.setBackground(isRowSelected(row) ? getSelectionBackground()
-		    : getBackground());
-	    c.setForeground(fg);
-	    return c;
-	}
-    }
-
-    /**
-     * ログリストのテーブルモデル
-     */
-    class LogTableModel extends DefaultTableModel {
-
-	private ArrayList<LogLine> mLogLines;
-
-	public LogTableModel(Object[] columnHeaders, int i) {
-	    super(columnHeaders, i);
-	    mLogLines = new ArrayList<>();
-	}
-
-	public void addRow(LogLine logLine) {
-	    mLogLines.add(logLine);
-	    mTableModel.addRow(new Object[] { logLine.getLevel(),
-		    logLine.getTimeStanp(), logLine.getTags(),
-		    logLine.getBody() });
-	}
-
-	@Override
-	public boolean isCellEditable(int row, int column) {
-	    return false;
-	}
-
-	public LogLine getItem(Integer identifier) {
-	    return mLogLines.get(identifier);
-	}
-    }
-
-    /**
-     * 複数行表示に対応したレンダラー
-     */
-    class MultilineStringRenderer extends JTextArea implements
-	    TableCellRenderer {
-
-	public MultilineStringRenderer() {
-	    setLineWrap(true);
-	    setWrapStyleWord(true);
-	    setMargin(new Insets(0, 0, 0, 0));
-	}
-
-	@Override
-	public Component getTableCellRendererComponent(JTable table,
-		Object value, boolean isSelected, boolean hasFocus, int row,
-		int column) {
-	    if (isSelected) {
-		setForeground(table.getSelectionForeground());
-		setBackground(table.getSelectionBackground());
-	    } else {
-		setForeground(table.getForeground());
-		setBackground(table.getBackground());
-	    }
-	    setText((value == null) ? "" : value.toString());
-
-	    return this;
-	}
-    }
-
-    /**
-     * ログレベルでのフィルタクラス
-     */
-    class LogLevelFilter extends RowFilter<LogTableModel, Integer> {
-
-	private int mLogLevel;
-
-	public LogLevelFilter() {
-	    this.mLogLevel = logLevelToInt(LOGLEVEL_VERBOSE);
-	}
-
-	private int logLevelToInt(char logLevel) {
-	    int level;
-	    switch (logLevel) {
-	    case LOGLEVEL_VERBOSE:
-		level = 5;
-		break;
-	    case LOGLEVEL_INFO:
-		level = 4;
-		break;
-	    case LOGLEVEL_DEBUG:
-		level = 3;
-		break;
-	    case LOGLEVEL_WARN:
-		level = 2;
-		break;
-	    default:
-		level = 1;
-		break;
-	    }
-	    return level;
-	}
-
-	public void setLogLevel(char level) {
-	    this.mLogLevel = logLevelToInt(level);
-	}
-
-	@Override
-	public boolean include(
-		javax.swing.RowFilter.Entry<? extends LogTableModel, ? extends Integer> entry) {
-	    LogTableModel model = entry.getModel();
-	    LogLine item = model.getItem(entry.getIdentifier());
-	    return logLevelToInt(item.getLevel()) <= mLogLevel;
-	}
-
     }
 }
