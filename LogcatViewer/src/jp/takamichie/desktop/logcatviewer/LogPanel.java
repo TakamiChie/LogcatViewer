@@ -38,10 +38,11 @@ import jp.takamichie.desktop.logcatviewer.classes.ProcessInfo;
 import jp.takamichie.desktop.logcatviewer.table.LogTable;
 import jp.takamichie.desktop.logcatviewer.table.LogTableModel;
 import jp.takamichie.desktop.logcatviewer.table.LogTableModel.LogItemListener;
-import jp.takamichie.desktop.logcatviewer.table.MultilineStringRenderer;
 import jp.takamichie.desktop.logcatviewer.table.filter.LogLevelFilter;
 import jp.takamichie.desktop.logcatviewer.table.filter.PIDFilter;
 import jp.takamichie.desktop.logcatviewer.table.filter.TagFilter;
+import jp.takamichie.desktop.logcatviewer.table.renderer.MultilineStringRenderer;
+import jp.takamichie.desktop.logcatviewer.table.renderer.VerticalTopRenderer;
 
 public class LogPanel extends javax.swing.JPanel implements Runnable,
 	ActionListener, LogItemListener {
@@ -163,11 +164,9 @@ public class LogPanel extends javax.swing.JPanel implements Runnable,
 
 	TableColumnModel columnModel = mListLog.getColumnModel();
 	columnModel.getColumn(0).setMaxWidth(10);
-	/*
-	 * columnModel.getColumn(0).setCellRenderer(new VerticalTopRenderer());
-	 * columnModel.getColumn(1).setCellRenderer(new VerticalTopRenderer());
-	 * columnModel.getColumn(2).setCellRenderer(new VerticalTopRenderer());
-	 */
+	columnModel.getColumn(0).setCellRenderer(new VerticalTopRenderer());
+	columnModel.getColumn(1).setCellRenderer(new VerticalTopRenderer());
+	columnModel.getColumn(2).setCellRenderer(new VerticalTopRenderer());
 	columnModel.getColumn(3).setCellRenderer(new MultilineStringRenderer());
 
 	scrollPane.setColumnHeaderView(mListLog.getTableHeader());

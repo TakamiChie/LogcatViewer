@@ -1,4 +1,4 @@
-package jp.takamichie.desktop.logcatviewer.table;
+package jp.takamichie.desktop.logcatviewer.table.renderer;
 
 import java.awt.Component;
 
@@ -21,6 +21,7 @@ public class VerticalTopRenderer extends JLabel implements TableCellRenderer {
 	    boolean isSelected, boolean hasFocus, int row, int column) {
 	setForeground(adaptee.getForeground());
 	setBackground(adaptee.getBackground());
+	setOpaque(true);
 	setBorder(adaptee.getBorder());
 	setFont(adaptee.getFont());
 	setText((value == null) ? "" : value.toString());

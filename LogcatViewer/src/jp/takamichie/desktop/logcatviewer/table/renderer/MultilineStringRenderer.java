@@ -1,4 +1,4 @@
-package jp.takamichie.desktop.logcatviewer.table;
+package jp.takamichie.desktop.logcatviewer.table.renderer;
 
 import java.awt.Component;
 
