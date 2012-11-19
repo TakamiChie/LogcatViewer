@@ -1,5 +1,6 @@
 package jp.takamichie.desktop.logcatviewer.classes;
 
+import java.io.UnsupportedEncodingException;
 import java.util.regex.Matcher;
 
 public class LogLine {
@@ -23,9 +24,13 @@ public class LogLine {
     public LogLine(Matcher m) {
 	this.mTimeStamp = m.group(1);
 	this.mLevel = m.group(2).charAt(0);
-	this.mTags = m.group(3);
 	this.mPID = Integer.parseInt(m.group(4));
-	this.mBody = m.group(5);
+	try {
+	    this.mTags = new String(m.group(3).getBytes("UTF-8"));
+	    this.mBody = new String(m.group(5).getBytes("UTF-8"));
+	} catch (UnsupportedEncodingException e) {
+	    e.printStackTrace();
+	}
     }
 
     public String getTimeStamp() {
