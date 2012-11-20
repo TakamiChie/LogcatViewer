@@ -186,6 +186,10 @@ public class LogPanel extends javax.swing.JPanel implements Runnable,
 
     }
 
+    /**
+     * 外部に保存したプロパティをロードします
+     * @param prop プロパティを保存するオブジェクト
+     */
     public void loadProperties(Properties prop) {
 	String[] columns = prop.getProperty(PROPKEY_COLUMN_SIZE, "").split(",");
 	if (columns.length == 3 && Integer.parseInt(columns[0]) >= 0
@@ -200,6 +204,10 @@ public class LogPanel extends javax.swing.JPanel implements Runnable,
 	}
     }
 
+    /**
+     * 外部にプロパティをセーブします
+     * @param prop プロパティを保存するオブジェクト
+     */
     public void saveProperties(Properties prop) {
 	TableColumnModel column = mListLog.getColumnModel();
 	prop.setProperty(PROPKEY_COLUMN_SIZE, String.format("%d,%d,%d", column

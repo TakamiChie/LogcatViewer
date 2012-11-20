@@ -90,6 +90,10 @@ public class Main extends JFrame implements ActionListener, WindowListener {
     private ArrayList<Device> mDeviceList;
     private JMenu mMenuDevices;
 
+    /**
+     * エントリポイント
+     * @param args コマンドライン引数
+     */
     public static void main(String[] args) {
 	EventQueue.invokeLater(new Runnable() {
 	    public void run() {
@@ -126,6 +130,9 @@ public class Main extends JFrame implements ActionListener, WindowListener {
 	}, 0, AUTOUPDATE_TIMER, TimeUnit.MILLISECONDS);
     }
 
+    /**
+     * デバイスのリストを更新し、変更があればメニュー項目を再構築します
+     */
     private void updateDeviceList() {
 	try {
 	    final Process process = new ProcessBuilder("adb", "devices")
@@ -196,6 +203,9 @@ public class Main extends JFrame implements ActionListener, WindowListener {
 	}
     }
 
+    /**
+     * 外部に保存したプロパティをロードします
+     */
     private void loadProperties() {
 	Properties prop = new Properties();
 	try (InputStream stream = new FileInputStream(PROPFILE_PATH)) {
@@ -228,6 +238,9 @@ public class Main extends JFrame implements ActionListener, WindowListener {
 	mLogPanel.loadProperties(prop);
     }
 
+    /**
+     * 外部にプロパティをセーブします
+     */
     private void saveProperties() {
 	Properties prop = new Properties();
 	try (InputStream stream = new FileInputStream(PROPFILE_PATH)) {
