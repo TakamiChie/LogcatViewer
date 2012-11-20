@@ -1,6 +1,7 @@
 package jp.takamichie.desktop.logcatviewer.classes;
 
 import java.io.UnsupportedEncodingException;
+import java.nio.charset.Charset;
 import java.util.regex.Matcher;
 
 public class LogLine {
@@ -26,8 +27,10 @@ public class LogLine {
 	this.mLevel = m.group(2).charAt(0);
 	this.mPID = Integer.parseInt(m.group(4));
 	try {
-	    this.mTags = new String(m.group(3).getBytes("UTF-8"));
-	    this.mBody = new String(m.group(5).getBytes("UTF-8"));
+	    this.mTags = new String(m.group(3).getBytes("UTF-8"),
+		    Charset.forName("UTF-8"));
+	    this.mBody = new String(m.group(5).getBytes("UTF-8"),
+		    Charset.forName("UTF-8"));
 	} catch (UnsupportedEncodingException e) {
 	    e.printStackTrace();
 	}
