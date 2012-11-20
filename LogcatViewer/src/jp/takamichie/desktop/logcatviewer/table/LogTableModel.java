@@ -44,6 +44,12 @@ public class LogTableModel extends DefaultTableModel {
 	}
     }
 
+    public void clearItems() {
+	mLogLines.clear();
+	mLastLogItem = null;
+	setRowCount(0);
+    }
+
     @Override
     public boolean isCellEditable(int row, int column) {
 	return false;

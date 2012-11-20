@@ -8,13 +8,18 @@ import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
+import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Properties;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import javax.swing.ButtonGroup;
 import javax.swing.JCheckBoxMenuItem;
@@ -25,10 +30,12 @@ import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JRadioButtonMenuItem;
 import javax.swing.KeyStroke;
+import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
 
 import jp.takamichie.desktop.logcatviewer.classes.CustomOptionPane;
+import jp.takamichie.desktop.logcatviewer.classes.Device;
 import jp.takamichie.desktop.logcatviewer.classes.ProcessInfo;
 import jp.takamichie.desktop.logcatviewer.table.filter.PIDFilter;
 
@@ -47,6 +54,7 @@ public class Main extends JFrame implements ActionListener, WindowListener {
     public static final String COMMAND_FILTER_COPY = "copy";
     public static final String COMMAND_FILTER_COPYBODY = "copybody";
     private static final String COMMAND_FILTER_ERASE = "erasefilter";
+    private static final String COMMAND_DEVICE = "device";
     public static final String COMMAND_LOG_DETAILS = "logdetails";
     private static final String PROPFILE_PATH = "LogcatViewer.properties";
     private static final String PROPKEY_WINDOW_BOUNDS = "windowBounds";
@@ -54,6 +62,7 @@ public class Main extends JFrame implements ActionListener, WindowListener {
     private static final String PROPKEY_CHASELOG = "chaseLog";
     private static final String PROPVALUE_YES = "yes";
     private static final String PROPVALUE_NO = "no";
+    private static final long AUTOUPDATE_TIMER = 5000;
     private LogPanel mLogPanel;
     private JMenu mMenuFilters;
     private JMenu mMenuLogLevels;
@@ -76,6 +85,10 @@ public class Main extends JFrame implements ActionListener, WindowListener {
     private JMenuItem mMenuItemEraseFilter;
     private ArrayList<String> mRecentTagList;
     private JMenuItem mMenuItemShowDetails;
+    private ScheduledExecutorService mScheduler;
+    private boolean mIsAutoUpdate;
+    private ArrayList<Device> mDeviceList;
+    private JMenu mMenuDevices;
 
     public static void main(String[] args) {
 	EventQueue.invokeLater(new Runnable() {
@@ -92,15 +105,94 @@ public class Main extends JFrame implements ActionListener, WindowListener {
     }
 
     public Main() {
-
 	initializeComponent();
+	mIsAutoUpdate = true;
+	mLogPanel.setDevice(null);
+
+	mRecentTagList = new ArrayList<String>();
+	addWindowListener(this);
+	loadProperties();
+
+	// 5秒ごとに実行
+	mScheduler = Executors.newSingleThreadScheduledExecutor();
+	mScheduler.scheduleWithFixedDelay(new Runnable() {
+
+	    public void run() {
+		if (mIsAutoUpdate) {
+		    updateDeviceList();
+		}
+	    }
+
+	}, 0, AUTOUPDATE_TIMER, TimeUnit.MILLISECONDS);
+    }
+
+    private void updateDeviceList() {
 	try {
-	    mLogPanel.setDevice(null);
-	    mRecentTagList = new ArrayList<String>();
-	    addWindowListener(this);
-	    loadProperties();
-	} catch (IOException e) {
-	    e.printStackTrace();
+	    final Process process = new ProcessBuilder("adb", "devices")
+		    .redirectErrorStream(true).start();
+	    Thread t = new Thread(new Runnable() {
+
+		@Override
+		public void run() {
+		    ArrayList<Device> tempList = new ArrayList<>();
+		    try (BufferedReader reader = new BufferedReader(
+			    new InputStreamReader(process.getInputStream()))) {
+			String line;
+			while ((line = reader.readLine()) != null) {
+			    String[] dataline = line.split("\t");
+			    if (dataline.length > 1
+				    && dataline[1].equals("device")) {
+				tempList.add(new Device(dataline[0]));
+			    }
+			}
+		    } catch (IOException e) {
+			e.printStackTrace();
+		    }
+		    // リスト変更チェック
+		    boolean changes = false;
+		    if (mDeviceList == null) {
+			changes = true;
+		    } else if (mDeviceList.size() != tempList.size()) {
+			changes = true;
+		    } else {
+			for (int i = 0; i < mDeviceList.size(); i++) {
+			    if (mDeviceList.get(i).equals(tempList.get(i))) {
+				changes = true;
+				break;
+			    }
+			}
+		    }
+
+		    // メニュー項目更新
+		    if (changes) {
+			mDeviceList = tempList;
+
+			SwingUtilities.invokeLater(new Runnable() {
+
+			    @Override
+			    public void run() {
+				mMenuDevices.removeAll();
+				int i = 0;
+				ButtonGroup group = new ButtonGroup();
+				for (Device d : mDeviceList) {
+				    JRadioButtonMenuItem item = new JRadioButtonMenuItem(
+					    ++i + ":" + d.toString());
+				    item.addActionListener(Main.this);
+				    item.setActionCommand(COMMAND_DEVICE);
+				    group.add(item);
+				    mMenuDevices.add(item);
+				}
+				if (mDeviceList.size() >= 1) {
+				    mMenuDevices.getItem(0).doClick();
+				}
+			    }
+			});
+		    }
+		}
+	    });
+	    t.start();
+	} catch (IOException e1) {
+	    e1.printStackTrace();
 	}
     }
 
@@ -174,11 +266,16 @@ public class Main extends JFrame implements ActionListener, WindowListener {
 	}
 
 	setTitle("LogcatViewer");
+
 	mLogPanel = new LogPanel(this);
 	getContentPane().add(mLogPanel, BorderLayout.CENTER);
 
 	mMenuBar = new JMenuBar();
 	setJMenuBar(mMenuBar);
+
+	mMenuDevices = new JMenu("デバイス(D)");
+	mMenuDevices.setMnemonic('D');
+	mMenuBar.add(mMenuDevices);
 
 	mMenuFilters = new JMenu("フィルタ(F)");
 	mMenuFilters.setMnemonic('F');
@@ -324,6 +421,11 @@ public class Main extends JFrame implements ActionListener, WindowListener {
     @Override
     public void actionPerformed(ActionEvent e) {
 	switch (e.getActionCommand()) {
+	case COMMAND_DEVICE:
+	    String text = ((JMenuItem) e.getSource()).getText();
+	    int i = Integer.parseInt(text.split(":")[0]) - 1;
+	    mLogPanel.setDevice(mDeviceList.get(i));
+	    break;
 	case COMMAND_LOGLEVEL_VERBOSE:
 	    mLogPanel.setLogLevel(LogPanel.LOGLEVEL_VERBOSE);
 	    break;

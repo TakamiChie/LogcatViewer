@@ -80,6 +80,7 @@ public class LogPanel extends javax.swing.JPanel implements Runnable,
     private int mMonitoringPID;
     private ScheduledExecutorService mScheduler;
     private JMenuItem mMenuItemShowDetails;
+    private Device mDevice;
 
     public LogPanel(Main main) {
 	mOwner = main;
@@ -186,8 +187,7 @@ public class LogPanel extends javax.swing.JPanel implements Runnable,
     }
 
     public void loadProperties(Properties prop) {
-	String[] columns = prop.getProperty(PROPKEY_COLUMN_SIZE, "")
-		.split(",");
+	String[] columns = prop.getProperty(PROPKEY_COLUMN_SIZE, "").split(",");
 	if (columns.length == 3 && Integer.parseInt(columns[0]) >= 0
 		&& Integer.parseInt(columns[1]) >= 0
 		&& Integer.parseInt(columns[2]) >= 0) {
@@ -208,8 +208,9 @@ public class LogPanel extends javax.swing.JPanel implements Runnable,
     }
 
     public void updateProcessList() throws IOException {
-	final Process proccess = new ProcessBuilder("adb", "shell", "ps")
-		.redirectErrorStream(true).start();
+	final Process proccess = new ProcessBuilder("adb", "-s",
+		mDevice.getDeviceID(), "shell", "ps").redirectErrorStream(true)
+		.start();
 	Thread t = new Thread(new Runnable() {
 
 	    @Override
@@ -248,18 +249,25 @@ public class LogPanel extends javax.swing.JPanel implements Runnable,
      *
      * @param device
      *            ロギングを行うデバイスオブジェクト
-     * @throws IOException
-     *             プロセスのロギングで入出力エラーが発生した
      */
-    public void setDevice(Device device) throws IOException {
+    public void setDevice(Device device) {
+	((LogTableModel)mListLog.getModel()).clearItems();
 	if (mProccess != null) {
 	    mProccess.destroy();
 	}
-	updateProcessList();
-	mProccess = new ProcessBuilder("adb", "logcat", "-v", "time")
-		.redirectErrorStream(true).start();
-	mLogcatThread = new Thread(this);
-	mLogcatThread.start();
+	this.mDevice = device;
+	if (device != null) {
+	    try {
+		updateProcessList();
+		mProccess = new ProcessBuilder("adb", "-s",
+			device.getDeviceID(), "logcat", "-v", "time")
+			.redirectErrorStream(true).start();
+		mLogcatThread = new Thread(this);
+		mLogcatThread.start();
+	    } catch (IOException e) {
+		e.printStackTrace();
+	    }
+	}
     }
 
     /**
