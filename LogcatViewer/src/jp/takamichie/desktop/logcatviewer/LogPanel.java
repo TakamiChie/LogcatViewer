@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -55,6 +56,7 @@ public class LogPanel extends javax.swing.JPanel implements Runnable,
     public static final char LOGLEVEL_WARN = 'W';
     public static final char LOGLEVEL_ERROR = 'E';
     private static final long AUTOUPDATE_TIMER = 5000;
+    private static final String PROPKEY_COLUMN_SIZE = "columnsize";
     @SuppressWarnings("unused")
     private Main mOwner;
     private JTable mListLog;
@@ -181,6 +183,28 @@ public class LogPanel extends javax.swing.JPanel implements Runnable,
 	scrollPane.setColumnHeaderView(mListLog.getTableHeader());
 	scrollPane.setViewportView(mListLog);
 
+    }
+
+    public void loadProperties(Properties prop) {
+	String[] columns = prop.getProperty(PROPKEY_COLUMN_SIZE, "")
+		.split(",");
+	if (columns.length == 3 && Integer.parseInt(columns[0]) >= 0
+		&& Integer.parseInt(columns[1]) >= 0
+		&& Integer.parseInt(columns[2]) >= 0) {
+	    TableColumnModel column = mListLog.getColumnModel();
+	    column.getColumn(1).setPreferredWidth(Integer.parseInt(columns[0]));
+	    column.getColumn(2).setPreferredWidth(Integer.parseInt(columns[1]));
+	    column.getColumn(3).setPreferredWidth(Integer.parseInt(columns[2]));
+	} else {
+	    this.setSize(400, 300);
+	}
+    }
+
+    public void saveProperties(Properties prop) {
+	TableColumnModel column = mListLog.getColumnModel();
+	prop.setProperty(PROPKEY_COLUMN_SIZE, String.format("%d,%d,%d", column
+		.getColumn(1).getWidth(), column.getColumn(2).getWidth(),
+		column.getColumn(3).getWidth()));
     }
 
     public void updateProcessList() throws IOException {

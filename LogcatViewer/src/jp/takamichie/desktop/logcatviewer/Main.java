@@ -6,8 +6,15 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
+import java.awt.event.WindowEvent;
+import java.awt.event.WindowListener;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.Properties;
 
 import javax.swing.ButtonGroup;
 import javax.swing.JCheckBoxMenuItem;
@@ -15,6 +22,7 @@ import javax.swing.JFrame;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
 import javax.swing.JRadioButtonMenuItem;
 import javax.swing.KeyStroke;
 import javax.swing.UIManager;
@@ -24,7 +32,7 @@ import jp.takamichie.desktop.logcatviewer.classes.CustomOptionPane;
 import jp.takamichie.desktop.logcatviewer.classes.ProcessInfo;
 import jp.takamichie.desktop.logcatviewer.table.filter.PIDFilter;
 
-public class Main extends JFrame implements ActionListener {
+public class Main extends JFrame implements ActionListener, WindowListener {
     private static final String COMMAND_LOGLEVEL_VERBOSE = "logverbose";
     private static final String COMMAND_LOGLEVEL_DEBUG = "logdebug";
     private static final String COMMAND_LOGLEVEL_INFO = "loginfo";
@@ -40,6 +48,12 @@ public class Main extends JFrame implements ActionListener {
     public static final String COMMAND_FILTER_COPYBODY = "copybody";
     private static final String COMMAND_FILTER_ERASE = "erasefilter";
     public static final String COMMAND_LOG_DETAILS = "logdetails";
+    private static final String PROPFILE_PATH = "LogcatViewer.properties";
+    private static final String PROPKEY_WINDOW_BOUNDS = "windowBounds";
+    private static final String PROPKEY_RECENT_TAGS = "recentTags";
+    private static final String PROPKEY_CHASELOG = "chaseLog";
+    private static final String PROPVALUE_YES = "yes";
+    private static final String PROPVALUE_NO = "no";
     private LogPanel mLogPanel;
     private JMenu mMenuFilters;
     private JMenu mMenuLogLevels;
@@ -68,7 +82,7 @@ public class Main extends JFrame implements ActionListener {
 	    public void run() {
 		try {
 		    Main window = new Main();
-		    window.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		    window.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 		    window.setVisible(true);
 		} catch (Exception e) {
 		    e.printStackTrace();
@@ -82,11 +96,72 @@ public class Main extends JFrame implements ActionListener {
 	initializeComponent();
 	try {
 	    mLogPanel.setDevice(null);
-	    // TODO: 直前のウィンドウ位置の復元
-	    this.setSize(400, 300);
 	    mRecentTagList = new ArrayList<String>();
+	    addWindowListener(this);
+	    loadProperties();
 	} catch (IOException e) {
 	    e.printStackTrace();
+	}
+    }
+
+    private void loadProperties() {
+	Properties prop = new Properties();
+	try (InputStream stream = new FileInputStream(PROPFILE_PATH)) {
+	    prop.loadFromXML(stream);
+	} catch (IOException e) {
+	    // ignore this
+	}
+	String[] bounds = prop.getProperty(PROPKEY_WINDOW_BOUNDS, "")
+		.split(",");
+	if (bounds.length == 4 && Integer.parseInt(bounds[0]) >= 0
+		&& Integer.parseInt(bounds[1]) >= 0
+		&& Integer.parseInt(bounds[2]) >= 0
+		&& Integer.parseInt(bounds[3]) >= 0) {
+	    setBounds(Integer.parseInt(bounds[0]), Integer.parseInt(bounds[1]),
+		    Integer.parseInt(bounds[2]), Integer.parseInt(bounds[3]));
+	} else {
+	    this.setSize(400, 300);
+	}
+	if (prop.containsKey(PROPKEY_RECENT_TAGS)) {
+	    String[] slist = prop.getProperty(PROPKEY_RECENT_TAGS).split(",");
+	    for (String s : slist) {
+		mRecentTagList.add(s);
+	    }
+	}
+	if (prop.getProperty(PROPKEY_CHASELOG, PROPVALUE_NO).equals(
+		PROPVALUE_YES)) {
+	    mLogPanel.setChaseItem(true);
+	    mMenuItemChaseItem.setSelected(true);
+	}
+	mLogPanel.loadProperties(prop);
+    }
+
+    private void saveProperties() {
+	Properties prop = new Properties();
+	try (InputStream stream = new FileInputStream(PROPFILE_PATH)) {
+	    prop.loadFromXML(stream);
+	} catch (IOException ex) {
+	    // ignore this
+	}
+	prop.setProperty(PROPKEY_WINDOW_BOUNDS, String.format("%d,%d,%d,%d",
+		getX(), getY(), getWidth(), getHeight()));
+	if (mRecentTagList.size() > 0) {
+	    StringBuilder tags = new StringBuilder();
+	    for (String tag : mRecentTagList) {
+		tags.append(tag + ",");
+	    }
+	    prop.setProperty(PROPKEY_RECENT_TAGS,
+		    tags.substring(0, tags.length() - 1));
+	}
+	prop.setProperty(PROPKEY_CHASELOG,
+		mMenuItemChaseItem.isSelected() ? PROPVALUE_YES : PROPVALUE_NO);
+	mLogPanel.saveProperties(prop);
+	try (OutputStream out = new FileOutputStream(PROPFILE_PATH)) {
+	    prop.storeToXML(out, null);
+	    out.flush();
+	} catch (IOException ex) {
+	    showStandardErrorDialog(ex);
+	    ex.printStackTrace();
 	}
     }
 
@@ -240,7 +315,8 @@ public class Main extends JFrame implements ActionListener {
 	mMenuItemShowDetails.setActionCommand(Main.COMMAND_LOG_DETAILS);
 	mMenuItemShowDetails.setMnemonic('L');
 	mMenuItemShowDetails.addActionListener(this);
-	mMenuItemShowDetails.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_D, 0));
+	mMenuItemShowDetails.setAccelerator(KeyStroke.getKeyStroke(
+		KeyEvent.VK_D, 0));
 	mMenuFilterSelection.add(mMenuItemShowDetails);
 
     }
@@ -273,8 +349,8 @@ public class Main extends JFrame implements ActionListener {
 		    names.add(info.getName());
 		}
 	    }
-	    int proc = CustomOptionPane.showDialogGetIndex(this, "プロセス", "プロセスを選択",
-		    false, names.toArray(new String[names.size()]));
+	    int proc = CustomOptionPane.showDialogGetIndex(this, "プロセス",
+		    "プロセスを選択", false, names.toArray(new String[names.size()]));
 	    if (proc != -1) {
 		mLogPanel.setFilteredPID(ids.get(proc));
 	    }
@@ -310,5 +386,62 @@ public class Main extends JFrame implements ActionListener {
 	default:
 	    break;
 	}
+    }
+
+    @Override
+    public void windowActivated(WindowEvent e) {
+
+    }
+
+    @Override
+    public void windowClosed(WindowEvent e) {
+	saveProperties();
+	System.exit(0);
+    }
+
+    @Override
+    public void windowClosing(WindowEvent e) {
+
+    }
+
+    @Override
+    public void windowDeactivated(WindowEvent e) {
+
+    }
+
+    @Override
+    public void windowDeiconified(WindowEvent e) {
+
+    }
+
+    @Override
+    public void windowIconified(WindowEvent e) {
+
+    }
+
+    @Override
+    public void windowOpened(WindowEvent e) {
+
+    }
+
+    /**
+     * エラーダイアログを表示します。
+     *
+     * @param e
+     *            例外オブジェクト
+     */
+    private void showStandardErrorDialog(Exception e) {
+	showStandardErrorDialog(e.getMessage());
+    }
+
+    /**
+     * エラーダイアログを表示します。
+     *
+     * @param e
+     *            エラーを説明した文字列
+     */
+    private void showStandardErrorDialog(String error) {
+	JOptionPane.showMessageDialog(this, error, "エラー",
+		JOptionPane.ERROR_MESSAGE);
     }
 }
