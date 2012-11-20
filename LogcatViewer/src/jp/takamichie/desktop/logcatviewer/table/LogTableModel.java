@@ -50,6 +50,6 @@ public class LogTableModel extends DefaultTableModel {
     }
 
     public LogLine getItem(Integer identifier) {
-	return mLogLines.get(identifier);
+	return identifier == -1 ? null : mLogLines.get(identifier);
     }
 }

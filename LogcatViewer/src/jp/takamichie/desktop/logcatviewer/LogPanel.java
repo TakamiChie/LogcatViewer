@@ -221,7 +221,7 @@ public class LogPanel extends javax.swing.JPanel implements Runnable,
 
     /**
      * ロギング対象となるデバイスを指定します。
-     * 
+     *
      * @param device
      *            ロギングを行うデバイスオブジェクト
      * @throws IOException
@@ -240,7 +240,7 @@ public class LogPanel extends javax.swing.JPanel implements Runnable,
 
     /**
      * リストをフィルタリングするPIDを指定します。
-     * 
+     *
      * @param pid
      *            PID。
      */
@@ -252,7 +252,7 @@ public class LogPanel extends javax.swing.JPanel implements Runnable,
 
     /**
      * リストをフィルタリングするタグを指定します。
-     * 
+     *
      * @param タグ文字列
      *            タグ文字列。
      */
@@ -264,7 +264,7 @@ public class LogPanel extends javax.swing.JPanel implements Runnable,
 
     /**
      * リストをフィルタリングするログレベルを指定します。
-     * 
+     *
      * @param loglevel
      *            ログレベル
      */
@@ -278,7 +278,7 @@ public class LogPanel extends javax.swing.JPanel implements Runnable,
 
     /**
      * 行を追加します。
-     * 
+     *
      * @param logLine
      *            追加する行を示す{@link LogLine}オブジェクト
      */
@@ -312,7 +312,7 @@ public class LogPanel extends javax.swing.JPanel implements Runnable,
 
     /**
      * クリップボードに文字列をコピーします
-     * 
+     *
      * @param string
      *            コピーする文字列
      */
@@ -326,7 +326,7 @@ public class LogPanel extends javax.swing.JPanel implements Runnable,
 
     /**
      * 最後のアイテムを常に追尾するかどうかを設定します
-     * 
+     *
      * @param state
      *            最後のアイテムを常に追尾するかどうか
      */
@@ -339,7 +339,7 @@ public class LogPanel extends javax.swing.JPanel implements Runnable,
 
     /**
      * 最後のアイテムを常に追尾するかどうかを取得します
-     * 
+     *
      * @return 最後のアイテムを常に追尾するかどうかを示す値
      */
     public boolean isChaseItem() {
@@ -389,28 +389,30 @@ public class LogPanel extends javax.swing.JPanel implements Runnable,
     public void actionPerformed(ActionEvent e) {
 	LogLine selected = ((LogTableModel) mListLog.getModel())
 		.getItem(mListLog.getSelectedRow());
-	switch (e.getActionCommand()) {
-	case Main.COMMAND_FILTER_THISTAG:
-	    setFilteredTag(selected.getTags());
-	    break;
-	case Main.COMMAND_FILTER_THISPROC:
-	    setFilteredPID(selected.getPID());
-	    break;
-	case Main.COMMAND_FILTER_WATCHPROC:
-	    mMonitoringPID = selected.getPID();
-	    break;
-	case Main.COMMAND_FILTER_COPY:
-	    copyToClipboard(selected.toString());
-	    break;
-	case Main.COMMAND_FILTER_COPYBODY:
-	    copyToClipboard(selected.getBody());
-	    break;
-	case Main.COMMAND_LOG_DETAILS:
-	    LogDetailDialog dialog = new LogDetailDialog(selected);
-	    JOptionPane.showMessageDialog(this, dialog, "ログの詳細",
-		    JOptionPane.PLAIN_MESSAGE);
-	default:
-	    break;
+	if (selected != null) {
+	    switch (e.getActionCommand()) {
+	    case Main.COMMAND_FILTER_THISTAG:
+		setFilteredTag(selected.getTags());
+		break;
+	    case Main.COMMAND_FILTER_THISPROC:
+		setFilteredPID(selected.getPID());
+		break;
+	    case Main.COMMAND_FILTER_WATCHPROC:
+		mMonitoringPID = selected.getPID();
+		break;
+	    case Main.COMMAND_FILTER_COPY:
+		copyToClipboard(selected.toString());
+		break;
+	    case Main.COMMAND_FILTER_COPYBODY:
+		copyToClipboard(selected.getBody());
+		break;
+	    case Main.COMMAND_LOG_DETAILS:
+		LogDetailDialog dialog = new LogDetailDialog(selected);
+		JOptionPane.showMessageDialog(this, dialog, "ログの詳細",
+			JOptionPane.PLAIN_MESSAGE);
+	    default:
+		break;
+	    }
 	}
     }
 
