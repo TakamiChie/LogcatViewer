@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<project
+	name="Create Runnable Jar for Project AdbViewer"
+	default="create_run_jar" >
+
+	<!-- this file was created by Eclipse Runnable JAR Export Wizard -->
+	<!-- ANT 1.7 is required -->
+
+	<target name="create_run_jar" >
+
+		<jar
+			destfile="./LogcatViewer.jar"
+			duplicate="preserve"
+			filesetmanifest="mergewithoutmain" >
+
+			<manifest>
+
+				<attribute
+					name="Main-Class"
+					value="jp.takamichie.desktop.logcatviewer.Main" />
+
+				<attribute
+					name="Class-Path"
+					value="." />
+			</manifest>
+
+			<fileset dir="bin" />
+
+			<zipfileset
+				dir="res"
+				prefix="res/" >
+
+				<include name="**/*" />
+			</zipfileset>
+		</jar>
+	</target>
+
+</project>
