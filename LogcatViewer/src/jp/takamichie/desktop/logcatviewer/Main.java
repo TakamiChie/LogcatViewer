@@ -39,6 +39,7 @@ public class Main extends JFrame implements ActionListener {
     public static final String COMMAND_FILTER_COPY = "copy";
     public static final String COMMAND_FILTER_COPYBODY = "copybody";
     private static final String COMMAND_FILTER_ERASE = "erasefilter";
+    public static final String COMMAND_LOG_DETAILS = "logdetails";
     private LogPanel mLogPanel;
     private JMenu mMenuFilters;
     private JMenu mMenuLogLevels;
@@ -60,6 +61,7 @@ public class Main extends JFrame implements ActionListener {
     private JMenuItem mMenuItemFilterdThisProcess;
     private JMenuItem mMenuItemEraseFilter;
     private ArrayList<String> mRecentTagList;
+    private JMenuItem mMenuItemShowDetails;
 
     public static void main(String[] args) {
 	EventQueue.invokeLater(new Runnable() {
@@ -233,6 +235,14 @@ public class Main extends JFrame implements ActionListener {
 	mMenuItemCopyToClipboardBodyOnly.setAccelerator(KeyStroke.getKeyStroke(
 		KeyEvent.VK_C, InputEvent.CTRL_MASK | InputEvent.SHIFT_MASK));
 	mMenuFilterSelection.add(mMenuItemCopyToClipboardBodyOnly);
+
+	mMenuItemShowDetails = new JMenuItem("ログの詳細(D)");
+	mMenuItemShowDetails.setActionCommand(Main.COMMAND_LOG_DETAILS);
+	mMenuItemShowDetails.setMnemonic('L');
+	mMenuItemShowDetails.addActionListener(this);
+	mMenuItemShowDetails.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_D, 0));
+	mMenuFilterSelection.add(mMenuItemShowDetails);
+
     }
 
     @Override
@@ -294,11 +304,11 @@ public class Main extends JFrame implements ActionListener {
 	case COMMAND_FILTER_WATCHPROC:
 	case COMMAND_FILTER_COPY:
 	case COMMAND_FILTER_COPYBODY:
+	case COMMAND_LOG_DETAILS:
 	    mLogPanel.actionPerformed(e);
 	    break;
 	default:
 	    break;
 	}
     }
-
 }

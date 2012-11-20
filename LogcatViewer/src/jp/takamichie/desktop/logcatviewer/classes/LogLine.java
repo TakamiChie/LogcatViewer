@@ -2,6 +2,7 @@ package jp.takamichie.desktop.logcatviewer.classes;
 
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.Charset;
+import java.util.HashMap;
 import java.util.regex.Matcher;
 
 public class LogLine {
@@ -20,12 +21,18 @@ public class LogLine {
     private char mLevel;
     private String mTags;
     private int mPID;
+    private String mProcessName;
     private String mBody;
 
-    public LogLine(Matcher m) {
+    public LogLine(Matcher m, HashMap<Integer, ProcessInfo> processList) {
 	this.mTimeStamp = m.group(1);
 	this.mLevel = m.group(2).charAt(0);
 	this.mPID = Integer.parseInt(m.group(4));
+	if (processList != null && processList.containsKey(this.mPID)) {
+	    this.mProcessName = processList.get(this.mPID).getName();
+	} else {
+	    this.mProcessName = "不明";
+	}
 	try {
 	    this.mTags = new String(m.group(3).getBytes("UTF-8"),
 		    Charset.forName("UTF-8"));
@@ -50,6 +57,10 @@ public class LogLine {
 
     public int getPID() {
 	return mPID;
+    }
+
+    public String getProcessName() {
+	return mProcessName;
     }
 
     public String getBody() {

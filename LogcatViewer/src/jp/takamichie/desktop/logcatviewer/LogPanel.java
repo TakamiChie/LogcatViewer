@@ -22,6 +22,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
 import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
@@ -76,6 +77,7 @@ public class LogPanel extends javax.swing.JPanel implements Runnable,
     @SuppressWarnings("unused")
     private int mMonitoringPID;
     private ScheduledExecutorService mScheduler;
+    private JMenuItem mMenuItemShowDetails;
 
     public LogPanel(Main main) {
 	mOwner = main;
@@ -93,6 +95,7 @@ public class LogPanel extends javax.swing.JPanel implements Runnable,
 	mLogSorter.setRowFilter(RowFilter.andFilter(mFilters));
 	mListLog.setRowSorter(mLogSorter);
 	addPopup(mListLog, mLogListPopupMenu);
+
 	// 5秒ごとに実行
 	mScheduler = Executors.newSingleThreadScheduledExecutor();
 	mScheduler.scheduleWithFixedDelay(new Runnable() {
@@ -162,6 +165,12 @@ public class LogPanel extends javax.swing.JPanel implements Runnable,
 	mMenuItemCopyToClipboardBodyOnly.addActionListener(this);
 	mLogListPopupMenu.add(mMenuItemCopyToClipboardBodyOnly);
 
+	mMenuItemShowDetails = new JMenuItem("ログの詳細(D)");
+	mMenuItemShowDetails.setActionCommand(Main.COMMAND_LOG_DETAILS);
+	mMenuItemShowDetails.setMnemonic('L');
+	mMenuItemShowDetails.addActionListener(this);
+	mLogListPopupMenu.add(mMenuItemShowDetails);
+
 	TableColumnModel columnModel = mListLog.getColumnModel();
 	columnModel.getColumn(0).setMaxWidth(10);
 	columnModel.getColumn(0).setCellRenderer(new VerticalTopRenderer());
@@ -212,7 +221,7 @@ public class LogPanel extends javax.swing.JPanel implements Runnable,
 
     /**
      * ロギング対象となるデバイスを指定します。
-     *
+     * 
      * @param device
      *            ロギングを行うデバイスオブジェクト
      * @throws IOException
@@ -222,6 +231,7 @@ public class LogPanel extends javax.swing.JPanel implements Runnable,
 	if (mProccess != null) {
 	    mProccess.destroy();
 	}
+	updateProcessList();
 	mProccess = new ProcessBuilder("adb", "logcat", "-v", "time")
 		.redirectErrorStream(true).start();
 	mLogcatThread = new Thread(this);
@@ -230,7 +240,7 @@ public class LogPanel extends javax.swing.JPanel implements Runnable,
 
     /**
      * リストをフィルタリングするPIDを指定します。
-     *
+     * 
      * @param pid
      *            PID。
      */
@@ -242,7 +252,7 @@ public class LogPanel extends javax.swing.JPanel implements Runnable,
 
     /**
      * リストをフィルタリングするタグを指定します。
-     *
+     * 
      * @param タグ文字列
      *            タグ文字列。
      */
@@ -254,7 +264,7 @@ public class LogPanel extends javax.swing.JPanel implements Runnable,
 
     /**
      * リストをフィルタリングするログレベルを指定します。
-     *
+     * 
      * @param loglevel
      *            ログレベル
      */
@@ -268,7 +278,7 @@ public class LogPanel extends javax.swing.JPanel implements Runnable,
 
     /**
      * 行を追加します。
-     *
+     * 
      * @param logLine
      *            追加する行を示す{@link LogLine}オブジェクト
      */
@@ -302,7 +312,7 @@ public class LogPanel extends javax.swing.JPanel implements Runnable,
 
     /**
      * クリップボードに文字列をコピーします
-     *
+     * 
      * @param string
      *            コピーする文字列
      */
@@ -316,7 +326,7 @@ public class LogPanel extends javax.swing.JPanel implements Runnable,
 
     /**
      * 最後のアイテムを常に追尾するかどうかを設定します
-     *
+     * 
      * @param state
      *            最後のアイテムを常に追尾するかどうか
      */
@@ -329,7 +339,7 @@ public class LogPanel extends javax.swing.JPanel implements Runnable,
 
     /**
      * 最後のアイテムを常に追尾するかどうかを取得します
-     *
+     * 
      * @return 最後のアイテムを常に追尾するかどうかを示す値
      */
     public boolean isChaseItem() {
@@ -346,7 +356,7 @@ public class LogPanel extends javax.swing.JPanel implements Runnable,
 	    while ((line = reader.readLine()) != null) {
 		Matcher m = pattern.matcher(line);
 		if (m.matches()) {
-		    addlog(new LogLine(m));
+		    addlog(new LogLine(m, getProcessList()));
 		}
 	    }
 	} catch (IOException e) {
@@ -395,6 +405,10 @@ public class LogPanel extends javax.swing.JPanel implements Runnable,
 	case Main.COMMAND_FILTER_COPYBODY:
 	    copyToClipboard(selected.getBody());
 	    break;
+	case Main.COMMAND_LOG_DETAILS:
+	    LogDetailDialog dialog = new LogDetailDialog(selected);
+	    JOptionPane.showMessageDialog(this, dialog, "ログの詳細",
+		    JOptionPane.PLAIN_MESSAGE);
 	default:
 	    break;
 	}
