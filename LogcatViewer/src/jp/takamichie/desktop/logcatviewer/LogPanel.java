@@ -2,6 +2,7 @@ package jp.takamichie.desktop.logcatviewer;
 
 import java.awt.BorderLayout;
 import java.awt.Component;
+import java.awt.SystemColor;
 import java.awt.Toolkit;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.StringSelection;
@@ -22,8 +23,12 @@ import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.JLabel;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
+import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
@@ -31,6 +36,7 @@ import javax.swing.ListSelectionModel;
 import javax.swing.RowFilter;
 import javax.swing.ScrollPaneConstants;
 import javax.swing.SwingUtilities;
+import javax.swing.border.BevelBorder;
 import javax.swing.table.TableColumnModel;
 import javax.swing.table.TableRowSorter;
 
@@ -81,6 +87,12 @@ public class LogPanel extends javax.swing.JPanel implements Runnable,
     private ScheduledExecutorService mScheduler;
     private JMenuItem mMenuItemShowDetails;
     private Device mDevice;
+    private JPanel panel;
+    private JLabel mDisplay_ChaseState;
+    private JLabel mDisplay_WatchDevice;
+    private JLabel mDisplay_FilterProc;
+    private JLabel mDisplay_LogLevel;
+    private JLabel mDisplay_FilterTags;
 
     public LogPanel(Main main) {
 	mOwner = main;
@@ -184,11 +196,38 @@ public class LogPanel extends javax.swing.JPanel implements Runnable,
 	scrollPane.setColumnHeaderView(mListLog.getTableHeader());
 	scrollPane.setViewportView(mListLog);
 
+	panel = new JPanel();
+	panel.setBorder(new BevelBorder(BevelBorder.LOWERED, null, null, null,
+		null));
+	add(panel, BorderLayout.SOUTH);
+	panel.setLayout(new BoxLayout(panel, BoxLayout.X_AXIS));
+
+	mDisplay_WatchDevice = new JLabel("device");
+	mDisplay_WatchDevice.setAlignmentX(Component.CENTER_ALIGNMENT);
+	panel.add(mDisplay_WatchDevice);
+
+	mDisplay_LogLevel = new JLabel("V");
+	panel.add(mDisplay_LogLevel);
+
+	mDisplay_FilterProc = new JLabel("PID");
+	panel.add(mDisplay_FilterProc);
+
+	mDisplay_FilterTags = new JLabel("Tag");
+	panel.add(mDisplay_FilterTags);
+
+	Component horizontalGlue = Box.createHorizontalGlue();
+	panel.add(horizontalGlue);
+
+	mDisplay_ChaseState = new JLabel("追尾");
+	panel.add(mDisplay_ChaseState);
+
     }
 
     /**
      * 外部に保存したプロパティをロードします
-     * @param prop プロパティを保存するオブジェクト
+     *
+     * @param prop
+     *            プロパティを保存するオブジェクト
      */
     public void loadProperties(Properties prop) {
 	String[] columns = prop.getProperty(PROPKEY_COLUMN_SIZE, "").split(",");
@@ -206,7 +245,9 @@ public class LogPanel extends javax.swing.JPanel implements Runnable,
 
     /**
      * 外部にプロパティをセーブします
-     * @param prop プロパティを保存するオブジェクト
+     *
+     * @param prop
+     *            プロパティを保存するオブジェクト
      */
     public void saveProperties(Properties prop) {
 	TableColumnModel column = mListLog.getColumnModel();
@@ -259,7 +300,7 @@ public class LogPanel extends javax.swing.JPanel implements Runnable,
      *            ロギングを行うデバイスオブジェクト
      */
     public void setDevice(Device device) {
-	((LogTableModel)mListLog.getModel()).clearItems();
+	((LogTableModel) mListLog.getModel()).clearItems();
 	if (mProccess != null) {
 	    mProccess.destroy();
 	}
@@ -267,6 +308,7 @@ public class LogPanel extends javax.swing.JPanel implements Runnable,
 	if (device != null) {
 	    try {
 		updateProcessList();
+		mDisplay_WatchDevice.setText(device.toString() + "  ");
 		mProccess = new ProcessBuilder("adb", "-s",
 			device.getDeviceID(), "logcat", "-v", "time")
 			.redirectErrorStream(true).start();
@@ -275,6 +317,8 @@ public class LogPanel extends javax.swing.JPanel implements Runnable,
 	    } catch (IOException e) {
 		e.printStackTrace();
 	    }
+	} else {
+	    mDisplay_WatchDevice.setText("デバイスを監視していません  ");
 	}
     }
 
@@ -288,6 +332,8 @@ public class LogPanel extends javax.swing.JPanel implements Runnable,
 	mPIDFilter.setPID(pid);
 	selectLastItemIsSetting();
 	mLogSorter.allRowsChanged();
+	mDisplay_FilterProc.setText(pid == PIDFilter.NOSELECT ? "すべてのPID  "
+		: "PID:" + pid + "  ");
     }
 
     /**
@@ -300,6 +346,8 @@ public class LogPanel extends javax.swing.JPanel implements Runnable,
 	mTagFilter.setTag(tag);
 	selectLastItemIsSetting();
 	mLogSorter.allRowsChanged();
+	mDisplay_FilterTags.setText(tag == null || tag.equals("") ? "  "
+		: "タグ:" + tag + "  ");
     }
 
     /**
@@ -312,6 +360,7 @@ public class LogPanel extends javax.swing.JPanel implements Runnable,
 	mLogLevelFilter.setLogLevel(loglevel);
 	selectLastItemIsSetting();
 	mLogSorter.allRowsChanged();
+	mDisplay_LogLevel.setText(loglevel + "  ");
     }
 
     // ユーティリティメソッド類
@@ -375,6 +424,8 @@ public class LogPanel extends javax.swing.JPanel implements Runnable,
 	if (state) {
 	    selectLastItem();
 	}
+	mDisplay_ChaseState.setForeground(state ? SystemColor.controlText
+		: SystemColor.controlDkShadow);
     }
 
     /**

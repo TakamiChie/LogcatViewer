@@ -92,7 +92,9 @@ public class Main extends JFrame implements ActionListener, WindowListener {
 
     /**
      * エントリポイント
-     * @param args コマンドライン引数
+     *
+     * @param args
+     *            コマンドライン引数
      */
     public static void main(String[] args) {
 	EventQueue.invokeLater(new Runnable() {
@@ -116,6 +118,7 @@ public class Main extends JFrame implements ActionListener, WindowListener {
 	mRecentTagList = new ArrayList<String>();
 	addWindowListener(this);
 	loadProperties();
+	mMenuItemEraseFilter.doClick();
 
 	// 5秒ごとに実行
 	mScheduler = Executors.newSingleThreadScheduledExecutor();
@@ -179,18 +182,23 @@ public class Main extends JFrame implements ActionListener, WindowListener {
 			    @Override
 			    public void run() {
 				mMenuDevices.removeAll();
-				int i = 0;
-				ButtonGroup group = new ButtonGroup();
-				for (Device d : mDeviceList) {
-				    JRadioButtonMenuItem item = new JRadioButtonMenuItem(
-					    ++i + ":" + d.toString());
-				    item.addActionListener(Main.this);
-				    item.setActionCommand(COMMAND_DEVICE);
-				    group.add(item);
-				    mMenuDevices.add(item);
-				}
 				if (mDeviceList.size() >= 1) {
+				    int i = 0;
+				    ButtonGroup group = new ButtonGroup();
+				    for (Device d : mDeviceList) {
+					JRadioButtonMenuItem item = new JRadioButtonMenuItem(
+						++i + ":" + d.toString());
+					item.addActionListener(Main.this);
+					item.setActionCommand(COMMAND_DEVICE);
+					group.add(item);
+					mMenuDevices.add(item);
+				    }
 				    mMenuDevices.getItem(0).doClick();
+				}else{
+					JMenuItem item = new JMenuItem("デバイスがありません");
+					mMenuDevices.add(item);
+					mLogPanel.setDevice(null);
+
 				}
 			    }
 			});
